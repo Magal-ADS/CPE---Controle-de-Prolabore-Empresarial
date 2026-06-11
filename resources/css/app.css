@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../views/**/*.blade.php';
+
+@theme {
+    --font-sans: 'Manrope', ui-sans-serif, sans-serif;
+    --font-display: 'Space Grotesk', ui-sans-serif, sans-serif;
+}
+
+@layer base {
+    :root {
+        --app-bg: #f4efe8;
+        --app-text: #0f172a;
+    }
+
+    .dark {
+        --app-bg: #020617;
+        --app-text: #e2e8f0;
+    }
+
+    body {
+        font-family: var(--font-sans);
+    }
+}
+
+@utility font-display {
+    font-family: var(--font-display);
+}
+
+@utility nav-link {
+    @apply rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-950 hover:text-white dark:text-slate-300 dark:hover:bg-white dark:hover:text-slate-950;
+}
+
+@utility nav-link-active {
+    @apply bg-slate-950 text-white dark:bg-white dark:text-slate-950;
+}
+
+@utility form-label {
+    @apply mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200;
+}
+
+@utility form-input {
+    @apply w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100;
+}
+
+@utility form-error {
+    @apply mt-2 text-sm font-medium text-rose-600 dark:text-rose-400;
+}
+
+@utility stat-card {
+    @apply rounded-[1.75rem] border border-slate-200 bg-white/70 p-5 dark:border-slate-800 dark:bg-slate-900/60;
+}
+
+@utility stat-label {
+    @apply text-sm font-semibold text-slate-500 dark:text-slate-400;
+}
+
+@utility stat-value {
+    @apply mt-3 text-3xl font-bold tracking-tight;
+}
+
+@utility stat-footnote {
+    @apply mt-2 text-sm text-slate-500 dark:text-slate-400;
+}
