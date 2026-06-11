@@ -29,9 +29,9 @@ services:
     container_name: cpe_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: cpe
-      POSTGRES_USER: cpe
-      POSTGRES_PASSWORD: cpe123
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5401:5432"
     volumes:
