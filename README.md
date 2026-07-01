@@ -92,6 +92,8 @@ APP_URL=https://cpe.weagles.com.br
 
 Se o dominio estiver ligado ao servico `app` em vez do `nginx`, o Dokploy responde com `404 page not found` antes de chegar no Laravel.
 
+Em producao no Dokploy, nao use bind mounts como `./:/var/www/html`. Como `vendor/` nao fica versionado no Git, esse mount sobrescreve o codigo construido na imagem e faz o Artisan falhar com erro de `vendor/autoload.php` ausente.
+
 ## Comandos obrigatoriamente no container
 
 Use sempre este formato:
