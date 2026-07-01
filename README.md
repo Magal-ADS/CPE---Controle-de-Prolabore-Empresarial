@@ -75,6 +75,23 @@ http://localhost:8080
 
 Se voce alterar o mapeamento de porta no `docker-compose.yml`, acesse pela nova porta publicada.
 
+## Deploy no Dokploy
+
+Para publicar esse projeto via Dokploy usando o `docker-compose.yml` da raiz:
+
+1. Use o servico `nginx` como servico web publicado no dominio.
+2. No dominio, aponte para a porta interna `80` do `nginx`, nao para o servico `app`.
+3. Mantenha o `app` apenas como PHP-FPM interno na rede Docker.
+4. Defina no ambiente de producao:
+
+```text
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://cpe.weagles.com.br
+```
+
+Se o dominio estiver ligado ao servico `app` em vez do `nginx`, o Dokploy responde com `404 page not found` antes de chegar no Laravel.
+
 ## Comandos obrigatoriamente no container
 
 Use sempre este formato:

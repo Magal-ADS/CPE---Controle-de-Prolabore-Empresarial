@@ -3,9 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: cpe_app
     restart: unless-stopped
     working_dir: /var/www/html
+    expose:
+      - "9000"
     volumes:
       - ./:/var/www/html
     depends_on:
@@ -14,10 +15,11 @@ services:
 
   nginx:
     image: nginx:1.29-alpine
-    container_name: cpe_nginx
     restart: unless-stopped
+    expose:
+      - "80"
     ports:
-      - "8001:80"
+      - "${APP_PORT:-8001}:80"
     volumes:
       - ./:/var/www/html
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
@@ -26,14 +28,15 @@ services:
 
   db:
     image: postgres:17-alpine
-    container_name: cpe_db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_DATABASE}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    expose:
+      - "5432"
     ports:
-      - "5401:5432"
+      - "${DB_FORWARD_PORT:-5401}:5432"
     volumes:
       - cpe_postgres_data:/var/lib/postgresql/data
     healthcheck:
