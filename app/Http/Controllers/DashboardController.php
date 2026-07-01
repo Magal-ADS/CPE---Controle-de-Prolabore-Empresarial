@@ -61,7 +61,9 @@ class DashboardController extends Controller
                 continue;
             }
 
-            $period[$label][$transaction->type] += (float) $transaction->amount;
+            $totals = $period->get($label);
+            $totals[$transaction->type] += (float) $transaction->amount;
+            $period->put($label, $totals);
         }
 
         $recentTransactions = DB::table('transactions')
