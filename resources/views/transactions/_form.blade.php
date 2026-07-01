@@ -97,27 +97,18 @@
             };
 
             const formatCurrencyValue = (value, finalize = false) => {
-                const sanitized = value.replace(/[^\d,.-]/g, '');
-                const lastComma = sanitized.lastIndexOf(',');
-                const lastDot = sanitized.lastIndexOf('.');
-                const separatorIndex = Math.max(lastComma, lastDot);
+                const sanitized = value.replace(/[^\d,]/g, '');
+                const parts = sanitized.split(',');
+                const integerPart = groupInteger(parts.shift() ?? '');
+                let decimalPart = parts.join('').replace(/\D/g, '').slice(0, 2);
 
-                if (separatorIndex >= 0) {
-                    const integerPart = groupInteger(sanitized.slice(0, separatorIndex));
-                    let decimalPart = sanitized.slice(separatorIndex + 1).replace(/\D/g, '').slice(0, 2);
-
-                    if (finalize) {
-                        decimalPart = decimalPart.padEnd(2, '0');
-                    }
-
-                    return decimalPart.length > 0 || finalize
-                        ? `${integerPart},${decimalPart}`
-                        : `${integerPart},`;
+                if (finalize) {
+                    decimalPart = decimalPart.padEnd(2, '0');
                 }
 
-                const integerPart = groupInteger(sanitized);
-
-                return finalize ? `${integerPart},00` : integerPart;
+                return decimalPart.length > 0 || finalize
+                    ? `${integerPart},${decimalPart}`
+                    : integerPart;
             };
 
             currencyInput.addEventListener('input', () => {

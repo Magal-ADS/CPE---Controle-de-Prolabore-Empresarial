@@ -2,28 +2,44 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Transaction;
 use Carbon\Carbon;
-use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     public function __invoke(Request $request): View
     {
-        $startDate = Carbon::parse($request->input('start_date', now()->startOfMonth()->toDateString()))->startOfDay();
-        $endDate = Carbon::parse($request->input('end_date', now()->endOfMonth()->toDateString()))->endOfDay();
+        $startDate = rescue(
+            fn () => Carbon::parse($request->input('start_date', now()->startOfMonth()->toDateString()))->startOfDay(),
+            now()->startOfMonth()->startOfDay(),
+            false
+        );
+        $endDate = rescue(
+            fn () => Carbon::parse($request->input('end_date', now()->endOfMonth()->toDateString()))->endOfDay(),
+            now()->endOfMonth()->endOfDay(),
+            false
+        );
 
-        $transactions = Transaction::query()
+        if ($endDate->lt($startDate)) {
+            [$startDate, $endDate] = [$endDate->copy()->startOfDay(), $startDate->copy()->endOfDay()];
+        }
+
+        $transactions = DB::table('transactions')
+            ->select('type', 'amount', 'transaction_date')
             ->whereNotNull('transaction_date')
             ->whereBetween('transaction_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->orderBy('transaction_date')
             ->get();
 
-        $incomeTotal = (float) $transactions->where('type', 'income')->sum('amount');
-        $expenseTotal = (float) $transactions->where('type', 'expense')->sum('amount');
-        $balance = (float) Transaction::query()
+        $incomeTotal = (float) $transactions
+            ->where('type', 'income')
+            ->sum(fn ($transaction) => (float) $transaction->amount);
+        $expenseTotal = (float) $transactions
+            ->where('type', 'expense')
+            ->sum(fn ($transaction) => (float) $transaction->amount);
+        $balance = (float) DB::table('transactions')
             ->selectRaw("COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as balance")
             ->value('balance');
 
@@ -38,13 +54,7 @@ class DashboardController extends Controller
 
         foreach ($transactions as $transaction) {
             $label = rescue(function () use ($transaction) {
-                $date = $transaction->transaction_date;
-
-                if ($date instanceof CarbonInterface) {
-                    return $date->format('d/m');
-                }
-
-                return Carbon::parse((string) $date)->format('d/m');
+                return Carbon::parse((string) $transaction->transaction_date)->format('d/m');
             }, null, false);
 
             if ($label === null || ! isset($period[$label], $period[$label][$transaction->type])) {
@@ -54,23 +64,28 @@ class DashboardController extends Controller
             $period[$label][$transaction->type] += (float) $transaction->amount;
         }
 
-        $recentTransactions = Transaction::query()
-            ->with('user')
+        $recentTransactions = DB::table('transactions')
+            ->leftJoin('users', 'users.id', '=', 'transactions.user_id')
+            ->select([
+                'transactions.type',
+                'transactions.amount',
+                'transactions.description',
+                'transactions.transaction_date',
+                'users.name as user_name',
+            ])
             ->whereNotNull('transaction_date')
             ->latest('transaction_date')
-            ->latest('id')
+            ->latest('transactions.id')
             ->limit(5)
             ->get()
-            ->each(function (Transaction $transaction): void {
-                $transaction->formatted_transaction_date = rescue(function () use ($transaction) {
-                    $date = $transaction->transaction_date;
+            ->map(function ($transaction) {
+                $transaction->formatted_transaction_date = rescue(
+                    fn () => Carbon::parse((string) $transaction->transaction_date)->format('d/m/Y'),
+                    'Data indisponivel',
+                    false
+                );
 
-                    if ($date instanceof CarbonInterface) {
-                        return $date->format('d/m/Y');
-                    }
-
-                    return Carbon::parse((string) $date)->format('d/m/Y');
-                }, null, false);
+                return $transaction;
             });
 
         return view('dashboard.index', [

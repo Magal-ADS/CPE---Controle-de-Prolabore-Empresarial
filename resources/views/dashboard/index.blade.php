@@ -68,7 +68,7 @@
                                 <div>
                                     <p class="text-sm font-semibold">{{ $transaction->description }}</p>
                                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                        {{ $transaction->user?->name ?? 'Usuario indisponivel' }} - {{ $transaction->formatted_transaction_date ?? 'Data indisponivel' }}
+                                        {{ $transaction->user_name ?? 'Usuario indisponivel' }} - {{ $transaction->formatted_transaction_date ?? 'Data indisponivel' }}
                                     </p>
                                 </div>
                                 <span @class([
