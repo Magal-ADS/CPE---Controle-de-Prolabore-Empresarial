@@ -96,19 +96,57 @@
                 return sanitized.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             };
 
-            const formatCurrencyValue = (value, finalize = false) => {
-                const sanitized = value.replace(/[^\d,]/g, '');
-                const parts = sanitized.split(',');
-                const integerPart = groupInteger(parts.shift() ?? '');
-                let decimalPart = parts.join('').replace(/\D/g, '').slice(0, 2);
+            const splitCurrencyParts = (value) => {
+                const sanitized = value.replace(/[^\d,.-]/g, '');
+                const lastComma = sanitized.lastIndexOf(',');
+                const lastDot = sanitized.lastIndexOf('.');
+                const separatorIndex = Math.max(lastComma, lastDot);
 
-                if (finalize) {
-                    decimalPart = decimalPart.padEnd(2, '0');
+                if (separatorIndex === -1) {
+                    return null;
                 }
 
-                return decimalPart.length > 0 || finalize
-                    ? `${integerPart},${decimalPart}`
-                    : integerPart;
+                return {
+                    integerDigits: sanitized.slice(0, separatorIndex).replace(/\D/g, ''),
+                    decimalDigits: sanitized.slice(separatorIndex + 1).replace(/\D/g, '').slice(0, 2),
+                    trailingSeparator: separatorIndex === sanitized.length - 1,
+                };
+            };
+
+            const formatCurrencyValue = (value, finalize = false) => {
+                const separatedValue = splitCurrencyParts(value);
+
+                if (separatedValue) {
+                    const integerPart = groupInteger(separatedValue.integerDigits);
+
+                    if (separatedValue.decimalDigits.length > 0) {
+                        const decimalPart = finalize
+                            ? separatedValue.decimalDigits.padEnd(2, '0')
+                            : separatedValue.decimalDigits;
+
+                        return `${integerPart},${decimalPart}`;
+                    }
+
+                    if (finalize) {
+                        return `${integerPart},00`;
+                    }
+
+                    return separatedValue.trailingSeparator
+                        ? `${integerPart},`
+                        : integerPart;
+                }
+
+                const digits = value.replace(/\D/g, '');
+
+                if (digits === '') {
+                    return '';
+                }
+
+                const paddedDigits = digits.padStart(3, '0');
+                const integerPart = groupInteger(paddedDigits.slice(0, -2));
+                const decimalPart = paddedDigits.slice(-2);
+
+                return `${integerPart},${decimalPart}`;
             };
 
             currencyInput.addEventListener('input', () => {

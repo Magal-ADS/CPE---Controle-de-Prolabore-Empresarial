@@ -56,7 +56,17 @@ class StoreTransactionRequest extends FormRequest
                 $normalizedAmount .= '.'.substr($fractionPart, 0, 2);
             }
         } else {
-            $normalizedAmount = preg_replace('/[^\d\-]/', '', $normalizedAmount);
+            $digits = preg_replace('/\D/', '', $normalizedAmount);
+
+            if ($digits === null || $digits === '') {
+                return;
+            }
+
+            $paddedDigits = str_pad($digits, 3, '0', STR_PAD_LEFT);
+            $integerPart = ltrim(substr($paddedDigits, 0, -2), '0');
+            $fractionPart = substr($paddedDigits, -2);
+
+            $normalizedAmount = ($integerPart === '' ? '0' : $integerPart).'.'.$fractionPart;
         }
 
         $this->merge([
