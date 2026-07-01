@@ -32,7 +32,7 @@
             <section class="p-6 sm:p-10">
                 <div class="mb-8">
                     <p class="font-display text-3xl font-bold tracking-tight">Entrar no portal</p>
-                    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Use o usuario inicial sem depender de setores ou permissoes fragmentadas.</p>
+                    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Acesse o ambiente financeiro com suas credenciais autorizadas.</p>
                 </div>
 
                 <form method="POST" action="{{ route('login.store') }}" class="grid gap-5">
@@ -63,12 +63,6 @@
                         Acessar sistema
                     </button>
                 </form>
-
-                <div class="mt-8 rounded-3xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                    <p class="font-semibold">Acesso padrao</p>
-                    <p class="mt-1">E-mail: admin@wtech.com</p>
-                    <p>Senha: 123</p>
-                </div>
             </section>
         </div>
     </div>

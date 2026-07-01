@@ -94,7 +94,7 @@ Se o dominio estiver ligado ao servico `app` em vez do `nginx`, o Dokploy respon
 
 Em producao no Dokploy, nao use bind mounts como `./:/var/www/html`. Como `vendor/` nao fica versionado no Git, esse mount sobrescreve o codigo construido na imagem e faz o Artisan falhar com erro de `vendor/autoload.php` ausente.
 
-Os assets do frontend tambem precisam ser gerados dentro da imagem publicada. O container `nginx` constroi e copia `public/build` no build para evitar `404` em `/build/assets/...` em producao.
+Os assets do frontend sao gerados em um stage compartilhado do `Dockerfile` e copiados tanto para o container `app` quanto para o `nginx`. Isso evita divergencia entre o `manifest.json` lido pelo Laravel e os arquivos estaticos servidos pelo `nginx`.
 
 ## Comandos obrigatoriamente no container
 

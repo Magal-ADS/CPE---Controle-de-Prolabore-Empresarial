@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: app-runtime
     restart: unless-stopped
     working_dir: /var/www/html
     expose:
@@ -14,7 +15,8 @@ services:
   nginx:
     build:
       context: .
-      dockerfile: docker/nginx/Dockerfile
+      dockerfile: Dockerfile
+      target: nginx-runtime
     restart: unless-stopped
     expose:
       - "80"
