@@ -1,5 +1,13 @@
 @csrf
 
+@php
+    $amountValue = old('amount');
+
+    if ($amountValue === null && $transaction->amount !== null) {
+        $amountValue = number_format((float) $transaction->amount, 2, ',', '.');
+    }
+@endphp
+
 <div class="grid gap-5 lg:grid-cols-2">
     <div>
         <label for="type" class="form-label">Tipo</label>
@@ -14,7 +22,17 @@
 
     <div>
         <label for="amount" class="form-label">Valor</label>
-        <input id="amount" name="amount" type="number" step="0.01" min="0.01" value="{{ old('amount', $transaction->amount) }}" class="form-input">
+        <input
+            id="amount"
+            name="amount"
+            type="text"
+            inputmode="decimal"
+            value="{{ $amountValue }}"
+            class="form-input"
+            data-currency-input
+            autocomplete="off"
+            placeholder="0,00"
+        >
         @error('amount')
             <p class="form-error">{{ $message }}</p>
         @enderror
@@ -58,3 +76,61 @@
         Cancelar
     </a>
 </div>
+
+@push('scripts')
+    <script>
+        (() => {
+            const currencyInput = document.querySelector('[data-currency-input]');
+
+            if (!currencyInput) {
+                return;
+            }
+
+            const groupInteger = (digits) => {
+                const sanitized = digits.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+
+                if (sanitized === '') {
+                    return '0';
+                }
+
+                return sanitized.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            };
+
+            const formatCurrencyValue = (value, finalize = false) => {
+                const sanitized = value.replace(/[^\d,.-]/g, '');
+                const lastComma = sanitized.lastIndexOf(',');
+                const lastDot = sanitized.lastIndexOf('.');
+                const separatorIndex = Math.max(lastComma, lastDot);
+
+                if (separatorIndex >= 0) {
+                    const integerPart = groupInteger(sanitized.slice(0, separatorIndex));
+                    let decimalPart = sanitized.slice(separatorIndex + 1).replace(/\D/g, '').slice(0, 2);
+
+                    if (finalize) {
+                        decimalPart = decimalPart.padEnd(2, '0');
+                    }
+
+                    return decimalPart.length > 0 || finalize
+                        ? `${integerPart},${decimalPart}`
+                        : `${integerPart},`;
+                }
+
+                const integerPart = groupInteger(sanitized);
+
+                return finalize ? `${integerPart},00` : integerPart;
+            };
+
+            currencyInput.addEventListener('input', () => {
+                currencyInput.value = formatCurrencyValue(currencyInput.value);
+            });
+
+            currencyInput.addEventListener('blur', () => {
+                currencyInput.value = formatCurrencyValue(currencyInput.value, true);
+            });
+
+            if (currencyInput.value.trim() !== '') {
+                currencyInput.value = formatCurrencyValue(currencyInput.value, true);
+            }
+        })();
+    </script>
+@endpush
