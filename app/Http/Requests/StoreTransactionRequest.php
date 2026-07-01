@@ -37,6 +37,7 @@ class StoreTransactionRequest extends FormRequest
             return;
         }
 
+        $isNegative = str_contains($normalizedAmount, '-');
         $lastComma = strrpos($normalizedAmount, ',');
         $lastDot = strrpos($normalizedAmount, '.');
         $decimalSeparator = null;
@@ -47,10 +48,14 @@ class StoreTransactionRequest extends FormRequest
 
         if ($decimalSeparator !== null) {
             $parts = explode($decimalSeparator, $normalizedAmount, 2);
-            $integerPart = preg_replace('/[^\d\-]/', '', $parts[0] ?? '');
+            $integerPart = preg_replace('/\D/', '', $parts[0] ?? '');
             $fractionPart = preg_replace('/\D/', '', $parts[1] ?? '');
 
-            $normalizedAmount = $integerPart;
+            if ($integerPart === null || $fractionPart === null || ($integerPart === '' && $fractionPart === '')) {
+                return;
+            }
+
+            $normalizedAmount = ($integerPart === '' ? '0' : $integerPart);
 
             if ($fractionPart !== '') {
                 $normalizedAmount .= '.'.substr($fractionPart, 0, 2);
@@ -67,6 +72,10 @@ class StoreTransactionRequest extends FormRequest
             $fractionPart = substr($paddedDigits, -2);
 
             $normalizedAmount = ($integerPart === '' ? '0' : $integerPart).'.'.$fractionPart;
+        }
+
+        if ($isNegative && $normalizedAmount !== '0.00') {
+            $normalizedAmount = '-'.$normalizedAmount;
         }
 
         $this->merge([

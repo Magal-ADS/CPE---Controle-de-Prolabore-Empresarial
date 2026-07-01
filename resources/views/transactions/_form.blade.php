@@ -96,46 +96,7 @@
                 return sanitized.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             };
 
-            const splitCurrencyParts = (value) => {
-                const sanitized = value.replace(/[^\d,.-]/g, '');
-                const lastComma = sanitized.lastIndexOf(',');
-                const lastDot = sanitized.lastIndexOf('.');
-                const separatorIndex = Math.max(lastComma, lastDot);
-
-                if (separatorIndex === -1) {
-                    return null;
-                }
-
-                return {
-                    integerDigits: sanitized.slice(0, separatorIndex).replace(/\D/g, ''),
-                    decimalDigits: sanitized.slice(separatorIndex + 1).replace(/\D/g, '').slice(0, 2),
-                    trailingSeparator: separatorIndex === sanitized.length - 1,
-                };
-            };
-
-            const formatCurrencyValue = (value, finalize = false) => {
-                const separatedValue = splitCurrencyParts(value);
-
-                if (separatedValue) {
-                    const integerPart = groupInteger(separatedValue.integerDigits);
-
-                    if (separatedValue.decimalDigits.length > 0) {
-                        const decimalPart = finalize
-                            ? separatedValue.decimalDigits.padEnd(2, '0')
-                            : separatedValue.decimalDigits;
-
-                        return `${integerPart},${decimalPart}`;
-                    }
-
-                    if (finalize) {
-                        return `${integerPart},00`;
-                    }
-
-                    return separatedValue.trailingSeparator
-                        ? `${integerPart},`
-                        : integerPart;
-                }
-
+            const formatCurrencyValue = (value) => {
                 const digits = value.replace(/\D/g, '');
 
                 if (digits === '') {
@@ -154,11 +115,11 @@
             });
 
             currencyInput.addEventListener('blur', () => {
-                currencyInput.value = formatCurrencyValue(currencyInput.value, true);
+                currencyInput.value = formatCurrencyValue(currencyInput.value);
             });
 
             if (currencyInput.value.trim() !== '') {
-                currencyInput.value = formatCurrencyValue(currencyInput.value, true);
+                currencyInput.value = formatCurrencyValue(currencyInput.value);
             }
         })();
     </script>
