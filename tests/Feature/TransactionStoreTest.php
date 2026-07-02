@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class TransactionStoreTest extends TestCase
@@ -53,5 +55,57 @@ class TransactionStoreTest extends TestCase
 
         $response->assertSessionHasErrors('amount');
         $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_it_stores_attachments_in_the_database_and_serves_them(): void
+    {
+        $user = User::factory()->create();
+        $file = UploadedFile::fake()->createWithContent('comprovante.pdf', 'pdf-content');
+
+        $response = $this->actingAs($user)->post(route('transactions.store'), [
+            'type' => 'expense',
+            'amount' => '150,00',
+            'transaction_date' => '2026-07-01',
+            'description' => 'Lancamento com comprovante',
+            'attachment' => $file,
+        ]);
+
+        $response->assertRedirect(route('transactions.index'));
+
+        $transaction = Transaction::query()->firstOrFail();
+
+        $this->assertNull($transaction->attachment_path);
+        $this->assertSame('comprovante.pdf', $transaction->attachment_name);
+        $this->assertNotEmpty($transaction->attachment_mime);
+        $this->assertSame(11, $transaction->attachment_size);
+        $this->assertSame('pdf-content', $transaction->attachment_content);
+
+        $this->actingAs($user)
+            ->get(route('transactions.attachment', $transaction))
+            ->assertOk()
+            ->assertHeader('Content-Type', $transaction->attachment_mime)
+            ->assertContent('pdf-content');
+    }
+
+    public function test_it_keeps_serving_legacy_attachments_saved_on_disk(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        Storage::disk('public')->put('transactions/legacy.pdf', 'legacy-content');
+
+        $transaction = Transaction::create([
+            'user_id' => $user->id,
+            'type' => 'expense',
+            'amount' => '99.90',
+            'transaction_date' => '2026-07-01',
+            'description' => 'Lancamento legado',
+            'attachment_path' => 'transactions/legacy.pdf',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('transactions.attachment', $transaction))
+            ->assertOk()
+            ->assertContent('legacy-content');
     }
 }

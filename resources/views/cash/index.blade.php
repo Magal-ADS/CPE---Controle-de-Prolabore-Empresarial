@@ -69,8 +69,8 @@
                                 <h3 class="mt-3 text-lg font-semibold">{{ $withdrawal->description }}</h3>
                                 <p class="mt-2 text-2xl font-bold text-rose-600 dark:text-rose-400">R$ {{ number_format((float) $withdrawal->amount, 2, ',', '.') }}</p>
 
-                                @if ($withdrawal->attachment_path)
-                                    <a href="{{ \Illuminate\Support\Facades\Storage::url($withdrawal->attachment_path) }}" target="_blank" class="mt-3 inline-flex text-sm font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400">
+                                @if ($withdrawal->hasAttachment())
+                                    <a href="{{ route('transactions.attachment', $withdrawal) }}" target="_blank" class="mt-3 inline-flex text-sm font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400">
                                         Ver comprovante
                                     </a>
                                 @endif

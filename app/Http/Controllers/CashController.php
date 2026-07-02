@@ -22,6 +22,7 @@ class CashController extends Controller
             );
 
         $withdrawals = (clone $withdrawalsQuery)
+            ->withoutAttachmentContent()
             ->with('user')
             ->latest('transaction_date')
             ->paginate(10)

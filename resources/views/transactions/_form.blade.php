@@ -52,8 +52,8 @@
         @error('attachment')
             <p class="form-error">{{ $message }}</p>
         @enderror
-        @if ($transaction->attachment_path)
-            <a href="{{ \Illuminate\Support\Facades\Storage::url($transaction->attachment_path) }}" target="_blank" class="mt-2 inline-flex text-sm font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400">
+        @if ($transaction->hasAttachment())
+            <a href="{{ route('transactions.attachment', $transaction) }}" target="_blank" class="mt-2 inline-flex text-sm font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400">
                 Ver comprovante atual
             </a>
         @endif

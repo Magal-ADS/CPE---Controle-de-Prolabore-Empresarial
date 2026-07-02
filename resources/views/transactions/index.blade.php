@@ -59,8 +59,8 @@
                             </div>
                             <h2 class="text-lg font-semibold">{{ $transaction->description }}</h2>
                             <p class="text-2xl font-bold">R$ {{ number_format((float) $transaction->amount, 2, ',', '.') }}</p>
-                            @if ($transaction->attachment_path)
-                                <a href="{{ \Illuminate\Support\Facades\Storage::url($transaction->attachment_path) }}" target="_blank" class="inline-flex text-sm font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400">
+                            @if ($transaction->hasAttachment())
+                                <a href="{{ route('transactions.attachment', $transaction) }}" target="_blank" class="inline-flex text-sm font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400">
                                     Abrir comprovante
                                 </a>
                             @endif

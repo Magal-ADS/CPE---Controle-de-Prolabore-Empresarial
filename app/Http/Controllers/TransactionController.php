@@ -6,6 +6,8 @@ use App\Http\Requests\StoreTransactionRequest;
 use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -14,6 +16,7 @@ class TransactionController extends Controller
     public function index(Request $request): View
     {
         $transactions = Transaction::query()
+            ->withoutAttachmentContent()
             ->with('user')
             ->when($request->filled('type'), fn ($query) => $query->where('type', $request->string('type')))
             ->when($request->filled('start_date'), fn ($query) => $query->whereDate('transaction_date', '>=', $request->string('start_date')))
@@ -37,11 +40,11 @@ class TransactionController extends Controller
 
     public function store(StoreTransactionRequest $request): RedirectResponse
     {
-        $data = $request->validated();
+        $data = $request->safe()->except('attachment');
         $data['user_id'] = $request->user()->id;
 
         if ($request->hasFile('attachment')) {
-            $data['attachment_path'] = $request->file('attachment')->store('transactions', 'public');
+            $this->fillAttachmentData($request->file('attachment'), $data);
         }
 
         Transaction::create($data);
@@ -57,20 +60,50 @@ class TransactionController extends Controller
 
     public function update(StoreTransactionRequest $request, Transaction $transaction): RedirectResponse
     {
-        $data = $request->validated();
+        $data = $request->safe()->except('attachment');
 
         if ($request->hasFile('attachment')) {
             if ($transaction->attachment_path) {
                 Storage::disk('public')->delete($transaction->attachment_path);
             }
 
-            $data['attachment_path'] = $request->file('attachment')->store('transactions', 'public');
+            $this->fillAttachmentData($request->file('attachment'), $data);
         }
 
         $transaction->update($data);
 
         return redirect()->route('transactions.index')
             ->with('status', 'Movimentacao atualizada com sucesso.');
+    }
+
+    public function attachment(Transaction $transaction): Response|RedirectResponse
+    {
+        if ($transaction->attachment_content !== null) {
+            return response(
+                $transaction->attachment_content,
+                200,
+                $this->attachmentHeaders(
+                    $transaction->attachmentFilename() ?? 'comprovante',
+                    $transaction->attachment_mime ?? 'application/octet-stream',
+                    $transaction->attachment_size,
+                ),
+            );
+        }
+
+        abort_unless($transaction->attachment_path, 404);
+
+        $disk = Storage::disk('public');
+        abort_unless($disk->exists($transaction->attachment_path), 404);
+
+        return response(
+            $disk->get($transaction->attachment_path),
+            200,
+            $this->attachmentHeaders(
+                $transaction->attachmentFilename() ?? 'comprovante',
+                $disk->mimeType($transaction->attachment_path) ?: 'application/octet-stream',
+                $disk->size($transaction->attachment_path),
+            ),
+        );
     }
 
     public function destroy(Transaction $transaction): RedirectResponse
@@ -83,5 +116,33 @@ class TransactionController extends Controller
 
         return redirect()->route('transactions.index')
             ->with('status', 'Movimentacao removida com sucesso.');
+    }
+
+    private function fillAttachmentData(UploadedFile $attachment, array &$data): void
+    {
+        $data['attachment_path'] = null;
+        $data['attachment_name'] = $attachment->getClientOriginalName();
+        $data['attachment_mime'] = $attachment->getMimeType() ?: $attachment->getClientMimeType();
+        $data['attachment_size'] = $attachment->getSize();
+        $data['attachment_content'] = $attachment->get();
+    }
+
+    private function attachmentHeaders(string $filename, string $mimeType, ?int $size = null): array
+    {
+        $safeFilename = str_replace(['\\', '"'], ['_', ''], $filename);
+        $headers = [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => sprintf(
+                "inline; filename=\"%s\"; filename*=UTF-8''%s",
+                $safeFilename,
+                rawurlencode($filename),
+            ),
+        ];
+
+        if ($size !== null) {
+            $headers['Content-Length'] = (string) $size;
+        }
+
+        return $headers;
     }
 }
