@@ -79,12 +79,53 @@ class TransactionStoreTest extends TestCase
         $this->assertNotEmpty($transaction->attachment_mime);
         $this->assertSame(11, $transaction->attachment_size);
         $this->assertSame('pdf-content', $transaction->attachment_content);
+        $this->assertStringStartsWith('base64:', $transaction->getRawOriginal('attachment_content'));
 
         $this->actingAs($user)
             ->get(route('transactions.attachment', $transaction))
             ->assertOk()
             ->assertHeader('Content-Type', $transaction->attachment_mime)
             ->assertContent('pdf-content');
+    }
+
+    public function test_it_updates_image_attachments_with_binary_content_safely(): void
+    {
+        $user = User::factory()->create();
+        $transaction = Transaction::create([
+            'user_id' => $user->id,
+            'type' => 'expense',
+            'amount' => '99.90',
+            'transaction_date' => '2026-07-01',
+            'description' => 'Lancamento sem comprovante',
+        ]);
+
+        $file = UploadedFile::fake()->image('comprovante.jpg', 16, 16);
+        $binaryContent = file_get_contents($file->getRealPath());
+
+        $this->assertIsString($binaryContent);
+
+        $response = $this->actingAs($user)->put(route('transactions.update', $transaction), [
+            'type' => 'expense',
+            'amount' => '99,90',
+            'transaction_date' => '2026-07-01',
+            'description' => 'Lancamento com imagem',
+            'attachment' => $file,
+        ]);
+
+        $response->assertRedirect(route('transactions.index'));
+
+        $transaction = $transaction->fresh();
+
+        $this->assertSame('comprovante.jpg', $transaction->attachment_name);
+        $this->assertNotEmpty($transaction->attachment_mime);
+        $this->assertSame($binaryContent, $transaction->attachment_content);
+        $this->assertStringStartsWith('base64:', $transaction->getRawOriginal('attachment_content'));
+
+        $this->actingAs($user)
+            ->get(route('transactions.attachment', $transaction))
+            ->assertOk()
+            ->assertHeader('Content-Type', $transaction->attachment_mime)
+            ->assertContent($binaryContent);
     }
 
     public function test_it_keeps_serving_legacy_attachments_saved_on_disk(): void
