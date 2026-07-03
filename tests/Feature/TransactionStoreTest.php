@@ -128,6 +128,25 @@ class TransactionStoreTest extends TestCase
             ->assertContent($binaryContent);
     }
 
+    public function test_it_decodes_attachment_content_loaded_as_a_resource(): void
+    {
+        $stream = fopen('php://temp', 'r+');
+
+        $this->assertIsResource($stream);
+
+        fwrite($stream, 'base64:'.base64_encode('image-bytes'));
+        rewind($stream);
+
+        $transaction = new Transaction();
+        $transaction->setRawAttributes([
+            'attachment_content' => $stream,
+        ], true);
+
+        $this->assertSame('image-bytes', $transaction->attachment_content);
+
+        fclose($stream);
+    }
+
     public function test_it_keeps_serving_legacy_attachments_saved_on_disk(): void
     {
         Storage::fake('public');

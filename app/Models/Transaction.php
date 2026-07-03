@@ -50,6 +50,10 @@ class Transaction extends Model
     {
         return Attribute::make(
             get: function ($value) {
+                if (is_resource($value)) {
+                    $value = stream_get_contents($value);
+                }
+
                 if (! is_string($value) || ! str_starts_with($value, self::ATTACHMENT_BASE64_PREFIX)) {
                     return $value;
                 }
