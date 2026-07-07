@@ -239,6 +239,26 @@ class TransactionStoreTest extends TestCase
         fclose($stream);
     }
 
+    public function test_it_decodes_legacy_base64_attachment_content_without_prefix(): void
+    {
+        $transaction = new Transaction;
+        $transaction->setRawAttributes([
+            'attachment_content' => base64_encode('%PDF-legacy-content'),
+        ], true);
+
+        $this->assertSame('%PDF-legacy-content', $transaction->attachment_content);
+    }
+
+    public function test_it_decodes_postgres_hex_encoded_attachment_content(): void
+    {
+        $transaction = new Transaction;
+        $transaction->setRawAttributes([
+            'attachment_content' => '\\x'.bin2hex('base64:'.base64_encode('%PDF-postgres-content')),
+        ], true);
+
+        $this->assertSame('%PDF-postgres-content', $transaction->attachment_content);
+    }
+
     public function test_it_keeps_serving_legacy_attachments_saved_on_disk(): void
     {
         Storage::fake('public');

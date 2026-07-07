@@ -54,13 +54,11 @@ class Transaction extends Model
                     $value = stream_get_contents($value);
                 }
 
-                if (! is_string($value) || ! str_starts_with($value, self::ATTACHMENT_BASE64_PREFIX)) {
+                if (! is_string($value)) {
                     return $value;
                 }
 
-                $decodedValue = base64_decode(substr($value, strlen(self::ATTACHMENT_BASE64_PREFIX)), true);
-
-                return $decodedValue === false ? $value : $decodedValue;
+                return $this->decodeAttachmentContent($value);
             },
             set: function ($value) {
                 if ($value === null) {
@@ -78,6 +76,50 @@ class Transaction extends Model
                 return self::ATTACHMENT_BASE64_PREFIX.base64_encode($value);
             },
         );
+    }
+
+    private function decodeAttachmentContent(string $value): string
+    {
+        if (str_starts_with($value, self::ATTACHMENT_BASE64_PREFIX)) {
+            $decodedValue = base64_decode(substr($value, strlen(self::ATTACHMENT_BASE64_PREFIX)), true);
+
+            return $decodedValue === false ? $value : $decodedValue;
+        }
+
+        if (str_starts_with($value, '\\x') && ctype_xdigit(substr($value, 2))) {
+            $decodedValue = hex2bin(substr($value, 2));
+
+            if (is_string($decodedValue)) {
+                return $this->decodeAttachmentContent($decodedValue);
+            }
+        }
+
+        return $this->decodeBase64Attachment($value) ?? $value;
+    }
+
+    private function decodeBase64Attachment(string $value): ?string
+    {
+        $normalizedValue = preg_replace('/\s+/', '', $value);
+
+        if (! is_string($normalizedValue) || $normalizedValue === '') {
+            return null;
+        }
+
+        $decodedValue = base64_decode($normalizedValue, true);
+
+        if (! is_string($decodedValue) || ! $this->looksLikeSupportedAttachment($decodedValue)) {
+            return null;
+        }
+
+        return $decodedValue;
+    }
+
+    private function looksLikeSupportedAttachment(string $value): bool
+    {
+        return str_starts_with($value, '%PDF-')
+            || str_starts_with($value, "\xFF\xD8\xFF")
+            || str_starts_with($value, "\x89PNG\r\n\x1A\n")
+            || str_starts_with($value, 'RIFF');
     }
 
     public function user(): BelongsTo
