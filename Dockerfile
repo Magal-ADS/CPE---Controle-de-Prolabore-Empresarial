@@ -36,6 +36,12 @@ RUN apk add --no-cache \
         zip \
     && apk del oniguruma-dev
 
+RUN { \
+        echo "upload_max_filesize=6M"; \
+        echo "post_max_size=8M"; \
+        echo "memory_limit=256M"; \
+    } > /usr/local/etc/php/conf.d/uploads.ini
+
 COPY --from=composer-bin /usr/bin/composer /usr/bin/composer
 
 COPY . /var/www/html

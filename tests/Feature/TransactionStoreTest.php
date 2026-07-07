@@ -88,6 +88,69 @@ class TransactionStoreTest extends TestCase
             ->assertContent('pdf-content');
     }
 
+    public function test_create_and_edit_forms_are_ready_for_file_uploads(): void
+    {
+        $user = User::factory()->create();
+        $transaction = Transaction::create([
+            'user_id' => $user->id,
+            'type' => 'expense',
+            'amount' => '99.90',
+            'transaction_date' => '2026-07-01',
+            'description' => 'Lancamento para formulario',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('transactions.create'))
+            ->assertOk()
+            ->assertSee('enctype="multipart/form-data"', false)
+            ->assertSee('name="attachment"', false);
+
+        $this->actingAs($user)
+            ->get(route('transactions.edit', $transaction))
+            ->assertOk()
+            ->assertSee('enctype="multipart/form-data"', false)
+            ->assertSee('name="attachment"', false);
+    }
+
+    public function test_index_shows_attachment_link_for_database_backed_attachments(): void
+    {
+        $user = User::factory()->create();
+        $transaction = Transaction::create([
+            'user_id' => $user->id,
+            'type' => 'expense',
+            'amount' => '99.90',
+            'transaction_date' => '2026-07-01',
+            'description' => 'Lancamento com comprovante',
+            'attachment_name' => 'comprovante.pdf',
+            'attachment_mime' => 'application/pdf',
+            'attachment_size' => 11,
+            'attachment_content' => 'pdf-content',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('transactions.index'))
+            ->assertOk()
+            ->assertSee(route('transactions.attachment', $transaction), false)
+            ->assertSee('Abrir comprovante');
+    }
+
+    public function test_it_rejects_attachments_larger_than_five_megabytes(): void
+    {
+        $user = User::factory()->create();
+        $file = UploadedFile::fake()->create('comprovante.pdf', 5121, 'application/pdf');
+
+        $response = $this->actingAs($user)->post(route('transactions.store'), [
+            'type' => 'expense',
+            'amount' => '150,00',
+            'transaction_date' => '2026-07-01',
+            'description' => 'Lancamento com comprovante grande',
+            'attachment' => $file,
+        ]);
+
+        $response->assertSessionHasErrors('attachment');
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
     public function test_it_updates_image_attachments_with_binary_content_safely(): void
     {
         $user = User::factory()->create();
@@ -137,7 +200,7 @@ class TransactionStoreTest extends TestCase
         fwrite($stream, 'base64:'.base64_encode('image-bytes'));
         rewind($stream);
 
-        $transaction = new Transaction();
+        $transaction = new Transaction;
         $transaction->setRawAttributes([
             'attachment_content' => $stream,
         ], true);
