@@ -134,6 +134,35 @@ class TransactionStoreTest extends TestCase
             ->assertSee('Abrir comprovante');
     }
 
+    public function test_it_serves_attachments_with_proxy_safe_headers_for_special_filenames(): void
+    {
+        $user = User::factory()->create();
+        $transaction = Transaction::create([
+            'user_id' => $user->id,
+            'type' => 'expense',
+            'amount' => '99.90',
+            'transaction_date' => '2026-07-01',
+            'description' => 'Lancamento com nome especial',
+            'attachment_name' => 'comprovante João "07/2026".pdf',
+            'attachment_mime' => 'application/pdf',
+            'attachment_size' => 11,
+            'attachment_content' => 'pdf-content',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('transactions.attachment', $transaction));
+
+        $response
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertContent('pdf-content');
+
+        $this->assertStringContainsString('inline;', $response->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('filename=', $response->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('filename*=', $response->headers->get('Content-Disposition'));
+        $this->assertFalse($response->headers->has('Content-Length'));
+    }
+
     public function test_it_rejects_attachments_larger_than_five_megabytes(): void
     {
         $user = User::factory()->create();

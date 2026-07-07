@@ -9,7 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 
 class TransactionController extends Controller
 {
@@ -85,7 +87,6 @@ class TransactionController extends Controller
                 $this->attachmentHeaders(
                     $transaction->attachmentFilename() ?? 'comprovante',
                     $transaction->attachment_mime ?? 'application/octet-stream',
-                    $transaction->attachment_size,
                 ),
             );
         }
@@ -101,7 +102,6 @@ class TransactionController extends Controller
             $this->attachmentHeaders(
                 $transaction->attachmentFilename() ?? 'comprovante',
                 $disk->mimeType($transaction->attachment_path) ?: 'application/octet-stream',
-                $disk->size($transaction->attachment_path),
             ),
         );
     }
@@ -127,22 +127,23 @@ class TransactionController extends Controller
         $data['attachment_content'] = $attachment->get();
     }
 
-    private function attachmentHeaders(string $filename, string $mimeType, ?int $size = null): array
+    private function attachmentHeaders(string $filename, string $mimeType): array
     {
-        $safeFilename = str_replace(['\\', '"'], ['_', ''], $filename);
-        $headers = [
-            'Content-Type' => $mimeType,
-            'Content-Disposition' => sprintf(
-                "inline; filename=\"%s\"; filename*=UTF-8''%s",
-                $safeFilename,
-                rawurlencode($filename),
-            ),
-        ];
+        $filename = trim((string) preg_replace('/[\x00-\x1F\x7F\\\\\/]+/', '_', $filename));
 
-        if ($size !== null) {
-            $headers['Content-Length'] = (string) $size;
+        if ($filename === '') {
+            $filename = 'comprovante';
         }
 
-        return $headers;
+        $fallbackFilename = trim((string) preg_replace('/[^A-Za-z0-9._-]+/', '_', Str::ascii($filename)), '._-');
+
+        if ($fallbackFilename === '') {
+            $fallbackFilename = 'comprovante';
+        }
+
+        return [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => HeaderUtils::makeDisposition('inline', $filename, $fallbackFilename),
+        ];
     }
 }
